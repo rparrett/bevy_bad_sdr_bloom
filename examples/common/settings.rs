@@ -85,10 +85,10 @@ fn update_ui(settings: Query<&BloomSettings, Changed<BloomSettings>>, mut text: 
     text.sections[0].value = format!(
         "BloomSettings
 -------------
-[Q/W] Threshold: {}
-[E/R] Knee: {}
-[A/S] Scale: {}
-[D/F] Intensity: {}",
+[Q/W] Threshold: {:.3}
+[E/R] Knee: {:.3}
+[A/S] Scale: {:.3}
+[D/F] Intensity: {:.3}",
         settings.threshold, settings.knee, settings.scale, settings.intensity
     );
 }
