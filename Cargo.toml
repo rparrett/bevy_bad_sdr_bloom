@@ -3,6 +3,13 @@ name = "bevy_bad_sdr_bloom"
 version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
+description = "Bevy plugin for a bloom-like glow effect that works with WebGL2"
+repository = "https://github.com/rparrett/bevy_bad_sdr_bloom"
+homepage = "https://github.com/rparrett/bevy_bad_sdr_bloom"
+documentation = "https://docs.rs/bevy_bad_sdr_bloom"
+keywords = ["bevy", "gamedev"]
+categories = ["game-development"]
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
