@@ -1,5 +1,6 @@
 # bevy_bad_sdr_bloom
 
+[![crates.io](https://img.shields.io/crates/v/bevy_bad_sdr_bloom.svg)](https://crates.io/crates/bevy_bad_sdr_bloom)
 [![Bevy tracking](https://img.shields.io/badge/Bevy%20tracking-released%20version-lightblue)](https://github.com/bevyengine/bevy/blob/main/docs/plugins_guidelines.md#main-branch-tracking)
 
 This is probably a bad idea, but I took Bevy 0.9's bloom and
