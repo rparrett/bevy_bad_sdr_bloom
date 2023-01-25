@@ -10,7 +10,7 @@ documentation = "https://docs.rs/bevy_bad_sdr_bloom"
 keywords = ["bevy", "gamedev"]
 categories = ["game-development"]
 readme = "README.md"
-exclude = ["assets"]
+exclude = ["assets", ".github"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
