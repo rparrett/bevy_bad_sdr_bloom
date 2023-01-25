@@ -4,7 +4,7 @@
 
 This is probably a bad idea, but I took Bevy 0.9's bloom and
 
-- replaced all the 16-bit float texture with Rgba8UNorm
+- replaced all the 16-bit float textures with Rgba8UNorm
 - used a bunch of textures instead of mips
 
 So that it would work with WebGL2.
