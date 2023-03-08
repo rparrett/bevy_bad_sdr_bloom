@@ -18,4 +18,5 @@ This isn't quite bloom anymore, but you can use it to make stuff sort of glowy i
 
 |bevy|bevy_bad_sdr_bloom|
 |-|-|
+|0.10|0.2|
 |0.9|0.1|
