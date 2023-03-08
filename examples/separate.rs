@@ -45,7 +45,6 @@ fn setup(
             camera_2d: Camera2d {
                 // Transparent clear color to ensure this layers on top of the output correctly
                 clear_color: ClearColorConfig::Custom(Color::NONE),
-                ..default()
             },
             camera: Camera {
                 order: 1,
