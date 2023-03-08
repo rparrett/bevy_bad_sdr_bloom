@@ -10,18 +10,19 @@ use bevy::ecs::{
     world::{FromWorld, World},
 };
 use bevy::math::UVec2;
+use bevy::prelude::{IntoSystemAppConfig, IntoSystemConfig};
 use bevy::reflect::{Reflect, TypeUuid};
 use bevy::render::{
     camera::ExtractedCamera,
     prelude::Camera,
     render_graph::{Node, NodeRunError, RenderGraph, RenderGraphContext, SlotInfo, SlotType},
-    render_phase::TrackedRenderPass,
     render_resource::*,
     renderer::{RenderContext, RenderDevice, RenderQueue},
     texture::{CachedTexture, TextureCache},
     view::ViewTarget,
-    Extract, RenderApp, RenderStage,
+    Extract, RenderApp,
 };
+use bevy::render::{ExtractSchedule, RenderSet};
 #[cfg(feature = "trace")]
 use bevy::utils::tracing::info_span;
 use bevy::utils::HashMap;
@@ -45,10 +46,10 @@ impl Plugin for BloomPlugin {
         render_app
             .init_resource::<BloomPipelines>()
             .init_resource::<BloomUniforms>()
-            .add_system_to_stage(RenderStage::Extract, extract_bloom_settings)
-            .add_system_to_stage(RenderStage::Prepare, prepare_bloom_textures)
-            .add_system_to_stage(RenderStage::Prepare, prepare_bloom_uniforms)
-            .add_system_to_stage(RenderStage::Queue, queue_bloom_bind_groups);
+            .add_system(extract_bloom_settings.in_schedule(ExtractSchedule))
+            .add_system(prepare_bloom_textures.in_set(RenderSet::Prepare))
+            .add_system(prepare_bloom_uniforms.in_set(RenderSet::Prepare))
+            .add_system(queue_bloom_bind_groups.in_set(RenderSet::Queue));
 
         {
             let bloom_node = BloomNode::new(&mut render_app.world);
@@ -57,27 +58,21 @@ impl Plugin for BloomPlugin {
                 .get_sub_graph_mut(crate::core_3d::graph::NAME)
                 .unwrap();
             draw_3d_graph.add_node(core_3d::graph::node::BLOOM, bloom_node);
-            draw_3d_graph
-                .add_slot_edge(
-                    draw_3d_graph.input_node().unwrap().id,
-                    crate::core_3d::graph::input::VIEW_ENTITY,
-                    core_3d::graph::node::BLOOM,
-                    BloomNode::IN_VIEW,
-                )
-                .unwrap();
+            draw_3d_graph.add_slot_edge(
+                draw_3d_graph.input_node().id,
+                crate::core_3d::graph::input::VIEW_ENTITY,
+                core_3d::graph::node::BLOOM,
+                BloomNode::IN_VIEW,
+            );
             // MAIN_PASS -> BLOOM -> TONEMAPPING
-            draw_3d_graph
-                .add_node_edge(
-                    crate::core_3d::graph::node::MAIN_PASS,
-                    core_3d::graph::node::BLOOM,
-                )
-                .unwrap();
-            draw_3d_graph
-                .add_node_edge(
-                    core_3d::graph::node::BLOOM,
-                    crate::core_3d::graph::node::TONEMAPPING,
-                )
-                .unwrap();
+            draw_3d_graph.add_node_edge(
+                crate::core_3d::graph::node::MAIN_PASS,
+                core_3d::graph::node::BLOOM,
+            );
+            draw_3d_graph.add_node_edge(
+                core_3d::graph::node::BLOOM,
+                crate::core_3d::graph::node::TONEMAPPING,
+            );
         }
 
         {
@@ -87,27 +82,21 @@ impl Plugin for BloomPlugin {
                 .get_sub_graph_mut(crate::core_2d::graph::NAME)
                 .unwrap();
             draw_2d_graph.add_node(core_2d::graph::node::BLOOM, bloom_node);
-            draw_2d_graph
-                .add_slot_edge(
-                    draw_2d_graph.input_node().unwrap().id,
-                    crate::core_2d::graph::input::VIEW_ENTITY,
-                    core_2d::graph::node::BLOOM,
-                    BloomNode::IN_VIEW,
-                )
-                .unwrap();
+            draw_2d_graph.add_slot_edge(
+                draw_2d_graph.input_node().id,
+                crate::core_2d::graph::input::VIEW_ENTITY,
+                core_2d::graph::node::BLOOM,
+                BloomNode::IN_VIEW,
+            );
             // MAIN_PASS -> BLOOM -> TONEMAPPING
-            draw_2d_graph
-                .add_node_edge(
-                    crate::core_2d::graph::node::MAIN_PASS,
-                    core_2d::graph::node::BLOOM,
-                )
-                .unwrap();
-            draw_2d_graph
-                .add_node_edge(
-                    core_2d::graph::node::BLOOM,
-                    crate::core_2d::graph::node::TONEMAPPING,
-                )
-                .unwrap();
+            draw_2d_graph.add_node_edge(
+                crate::core_2d::graph::node::MAIN_PASS,
+                core_2d::graph::node::BLOOM,
+            );
+            draw_2d_graph.add_node_edge(
+                core_2d::graph::node::BLOOM,
+                crate::core_2d::graph::node::TONEMAPPING,
+            );
         }
     }
 }
@@ -215,18 +204,18 @@ impl Node for BloomNode {
 
         {
             let view = &BloomTextures::texture_view(&textures.textures_a[0]);
+
             let mut prefilter_pass =
-                TrackedRenderPass::new(render_context.command_encoder.begin_render_pass(
-                    &RenderPassDescriptor {
-                        label: Some("bloom_prefilter_pass"),
-                        color_attachments: &[Some(RenderPassColorAttachment {
-                            view,
-                            resolve_target: None,
-                            ops: Operations::default(),
-                        })],
-                        depth_stencil_attachment: None,
-                    },
-                ));
+                render_context.begin_tracked_render_pass(RenderPassDescriptor {
+                    label: Some("bloom_prefilter_pass"),
+                    color_attachments: &[Some(RenderPassColorAttachment {
+                        view,
+                        resolve_target: None,
+                        ops: Operations::default(),
+                    })],
+                    depth_stencil_attachment: None,
+                });
+
             prefilter_pass.set_render_pipeline(downsampling_prefilter_pipeline);
             prefilter_pass.set_bind_group(0, &bind_groups.prefilter_bind_group, &[uniform_index.0]);
             if let Some(viewport) = camera.viewport.as_ref() {
@@ -237,18 +226,18 @@ impl Node for BloomNode {
 
         for mip in 1..textures.mip_count {
             let view = &BloomTextures::texture_view(&textures.textures_a[mip as usize]);
+
             let mut downsampling_pass =
-                TrackedRenderPass::new(render_context.command_encoder.begin_render_pass(
-                    &RenderPassDescriptor {
-                        label: Some("bloom_downsampling_pass"),
-                        color_attachments: &[Some(RenderPassColorAttachment {
-                            view,
-                            resolve_target: None,
-                            ops: Operations::default(),
-                        })],
-                        depth_stencil_attachment: None,
-                    },
-                ));
+                render_context.begin_tracked_render_pass(RenderPassDescriptor {
+                    label: Some("bloom_downsampling_pass"),
+                    color_attachments: &[Some(RenderPassColorAttachment {
+                        view,
+                        resolve_target: None,
+                        ops: Operations::default(),
+                    })],
+                    depth_stencil_attachment: None,
+                });
+
             downsampling_pass.set_render_pipeline(downsampling_pipeline);
             downsampling_pass.set_bind_group(
                 0,
@@ -264,17 +253,16 @@ impl Node for BloomNode {
         for mip in (1..textures.mip_count).rev() {
             let view = &BloomTextures::texture_view(&textures.textures_b[mip as usize - 1]);
             let mut upsampling_pass =
-                TrackedRenderPass::new(render_context.command_encoder.begin_render_pass(
-                    &RenderPassDescriptor {
-                        label: Some("bloom_upsampling_pass"),
-                        color_attachments: &[Some(RenderPassColorAttachment {
-                            view,
-                            resolve_target: None,
-                            ops: Operations::default(),
-                        })],
-                        depth_stencil_attachment: None,
-                    },
-                ));
+                render_context.begin_tracked_render_pass(RenderPassDescriptor {
+                    label: Some("bloom_upsampling_pass"),
+                    color_attachments: &[Some(RenderPassColorAttachment {
+                        view,
+                        resolve_target: None,
+                        ops: Operations::default(),
+                    })],
+                    depth_stencil_attachment: None,
+                });
+
             upsampling_pass.set_render_pipeline(upsampling_pipeline);
             upsampling_pass.set_bind_group(
                 0,
@@ -289,18 +277,17 @@ impl Node for BloomNode {
 
         {
             let mut upsampling_final_pass =
-                TrackedRenderPass::new(render_context.command_encoder.begin_render_pass(
-                    &RenderPassDescriptor {
-                        label: Some("bloom_upsampling_final_pass"),
-                        color_attachments: &[Some(view_target.get_unsampled_color_attachment(
-                            Operations {
-                                load: LoadOp::Load,
-                                store: true,
-                            },
-                        ))],
-                        depth_stencil_attachment: None,
-                    },
-                ));
+                render_context.begin_tracked_render_pass(RenderPassDescriptor {
+                    label: Some("bloom_upsampling_final_pass"),
+                    color_attachments: &[Some(view_target.get_unsampled_color_attachment(
+                        Operations {
+                            load: LoadOp::Load,
+                            store: true,
+                        },
+                    ))],
+                    depth_stencil_attachment: None,
+                });
+
             upsampling_final_pass.set_render_pipeline(upsampling_final_pipeline);
             upsampling_final_pass.set_bind_group(
                 0,
@@ -423,12 +410,12 @@ impl FromWorld for BloomPipelines {
                 ],
             });
 
-        let mut pipeline_cache = world.resource_mut::<PipelineCache>();
+        let pipeline_cache = world.resource::<PipelineCache>();
 
         let downsampling_prefilter_pipeline =
             pipeline_cache.queue_render_pipeline(RenderPipelineDescriptor {
                 label: Some("bloom_downsampling_prefilter_pipeline".into()),
-                layout: Some(vec![downsampling_bind_group_layout.clone()]),
+                layout: vec![downsampling_bind_group_layout.clone()],
                 vertex: fullscreen_shader_vertex_state(),
                 fragment: Some(FragmentState {
                     shader: BLOOM_SHADER_HANDLE.typed::<Shader>(),
@@ -443,12 +430,13 @@ impl FromWorld for BloomPipelines {
                 primitive: PrimitiveState::default(),
                 depth_stencil: None,
                 multisample: MultisampleState::default(),
+                push_constant_ranges: vec![],
             });
 
         let downsampling_pipeline =
             pipeline_cache.queue_render_pipeline(RenderPipelineDescriptor {
                 label: Some("bloom_downsampling_pipeline".into()),
-                layout: Some(vec![downsampling_bind_group_layout.clone()]),
+                layout: vec![downsampling_bind_group_layout.clone()],
                 vertex: fullscreen_shader_vertex_state(),
                 fragment: Some(FragmentState {
                     shader: BLOOM_SHADER_HANDLE.typed::<Shader>(),
@@ -463,11 +451,12 @@ impl FromWorld for BloomPipelines {
                 primitive: PrimitiveState::default(),
                 depth_stencil: None,
                 multisample: MultisampleState::default(),
+                push_constant_ranges: vec![],
             });
 
         let upsampling_pipeline = pipeline_cache.queue_render_pipeline(RenderPipelineDescriptor {
             label: Some("bloom_upsampling_pipeline".into()),
-            layout: Some(vec![upsampling_bind_group_layout.clone()]),
+            layout: vec![upsampling_bind_group_layout.clone()],
             vertex: fullscreen_shader_vertex_state(),
             fragment: Some(FragmentState {
                 shader: BLOOM_SHADER_HANDLE.typed::<Shader>(),
@@ -482,12 +471,13 @@ impl FromWorld for BloomPipelines {
             primitive: PrimitiveState::default(),
             depth_stencil: None,
             multisample: MultisampleState::default(),
+            push_constant_ranges: vec![],
         });
 
         let upsampling_final_pipeline =
             pipeline_cache.queue_render_pipeline(RenderPipelineDescriptor {
                 label: Some("bloom_upsampling_final_pipeline".into()),
-                layout: Some(vec![downsampling_bind_group_layout.clone()]),
+                layout: vec![downsampling_bind_group_layout.clone()],
                 vertex: fullscreen_shader_vertex_state(),
                 fragment: Some(FragmentState {
                     shader: BLOOM_SHADER_HANDLE.typed::<Shader>(),
@@ -509,6 +499,7 @@ impl FromWorld for BloomPipelines {
                 primitive: PrimitiveState::default(),
                 depth_stencil: None,
                 multisample: MultisampleState::default(),
+                push_constant_ranges: vec![],
             });
 
         BloomPipelines {
@@ -578,6 +569,7 @@ fn prepare_bloom_textures(
                 dimension: TextureDimension::D2,
                 format: TextureFormat::Rgba8UnormSrgb,
                 usage: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
+                view_formats: &[],
             };
 
             let texture_a_vec = texture_as

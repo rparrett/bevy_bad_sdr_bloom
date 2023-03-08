@@ -9,10 +9,10 @@ fn main() {
     App::new()
         .insert_resource(ClearColor(Color::rgb(0.1, 0.1, 0.1)))
         .add_plugins(DefaultPlugins.set(WindowPlugin {
-            window: WindowDescriptor {
+            primary_window: Some(Window {
                 fit_canvas_to_parent: true,
                 ..default()
-            },
+            }),
             ..default()
         }))
         .add_plugin(BloomPlugin)
