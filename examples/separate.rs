@@ -78,7 +78,7 @@ fn setup(
         MaterialMesh2dBundle {
             mesh: meshes.add(shape::Circle::new(100.).into()).into(),
             material: materials.add(ColorMaterial::from(Color::Hsla {
-                hue: 180.,
+                hue: 100.,
                 saturation,
                 lightness,
                 alpha,
@@ -96,7 +96,7 @@ fn setup(
                 .add(shape::RegularPolygon::new(100., 6).into())
                 .into(),
             material: materials.add(ColorMaterial::from(Color::Hsla {
-                hue: 60.,
+                hue: 100.,
                 saturation,
                 lightness,
                 alpha,
