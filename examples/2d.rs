@@ -29,7 +29,7 @@ fn setup(
     commands.spawn((
         Camera2dBundle::default(),
         BloomSettings {
-            threshold: 0.01,
+            threshold: 0.11, // Just above the clear color
             intensity: 0.5,
             scale: 1.0,
             ..default()
