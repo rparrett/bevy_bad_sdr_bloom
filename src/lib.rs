@@ -1,4 +1,3 @@
-#![allow(clippy::type_complexity)]
 use bevy::app::{App, Plugin};
 use bevy::asset::{load_internal_asset, HandleUntyped};
 use bevy::core_pipeline::{
