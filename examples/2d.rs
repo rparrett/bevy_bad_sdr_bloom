@@ -1,7 +1,7 @@
 use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
 use bevy_bad_sdr_bloom::{BloomPlugin, BloomSettings};
 
-use common::settings::BloomSettingsPlugin; // Only needed for the demo
+use common::settings::BloomSettingsPlugin; // Only needed for controlling the demo
 
 mod common;
 
@@ -16,7 +16,7 @@ fn main() {
             ..default()
         }))
         .add_plugin(BloomPlugin)
-        .add_plugin(BloomSettingsPlugin) // Only needed for the demo
+        .add_plugin(BloomSettingsPlugin) // Only needed for controlling the demo
         .add_startup_system(setup)
         .run();
 }
