@@ -577,7 +577,7 @@ fn prepare_bloom_textures(
                 .or_insert_with(|| {
                     let mut texture_a_vec = vec![];
                     for i in 0..mip_count {
-                        let label = format!("bloom_texture_a_{}", i);
+                        let label = format!("bloom_texture_a_{i}");
                         texture_descriptor.label = Some(Box::leak(label.into_boxed_str()));
                         texture_a_vec
                             .push(texture_cache.get(&render_device, texture_descriptor.clone()));
@@ -591,7 +591,7 @@ fn prepare_bloom_textures(
                 .or_insert_with(|| {
                     let mut texture_b_vec = vec![];
                     for i in 0..mip_count {
-                        let label = format!("bloom_texture_b_{}", i);
+                        let label = format!("bloom_texture_b_{i}");
                         texture_descriptor.label = Some(Box::leak(label.into_boxed_str()));
                         texture_b_vec
                             .push(texture_cache.get(&render_device, texture_descriptor.clone()));
